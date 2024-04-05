@@ -1,0 +1,1 @@
+criar uma conexão odbc pata o banco com o nome "odbc_MSSQL"
