@@ -10,6 +10,7 @@ object FPrincipal: TFPrincipal
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
+  OnClose = FormClose
   OnCreate = FormCreate
   TextHeight = 15
   object Label1: TLabel

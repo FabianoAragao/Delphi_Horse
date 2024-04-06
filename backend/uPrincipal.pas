@@ -13,6 +13,7 @@ type
     Label1: TLabel;
     procedure BitBtn1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
   private
     tarefaDao: ITarefaDao;
 
@@ -25,6 +26,8 @@ type
     procedure retornaMediaPrioridadeTarefas(Req: THorseRequest; Res: THorseResponse; Next: TProc);
     function criaObjJson(tarefa: TTarefa): TJSONObject;
     function criaListaJSON(query: TADOQuery): TJSONArray;
+    procedure pararServidor;
+    procedure iniciarServidor;
   public
 
   end;
@@ -45,68 +48,85 @@ begin
   try
     if(BitBtn1.Caption = 'Iniciar')then
       begin
-        BitBtn1.Caption := 'Parar';
-        try
-          if(not assigned(tarefaDao))then
-            tarefaDao := TDatabaseFactory.CreateInteraction;
-
-          THorse.Get('/consultar', procedure(Req: THorseRequest; Res: THorseResponse; Next: TProc)
-            begin
-              self.consultar(Req, Res, Next);
-            end);
-
-          THorse.post('/inserir',
-            procedure(Req: THorseRequest; Res: THorseResponse; Next: TProc)
-            begin
-              self.inserir(Req, Res, Next);
-            end);
-
-          THorse.put('/alterar',
-            procedure(Req: THorseRequest; Res: THorseResponse; Next: TProc)
-            begin
-              self.alterar(Req, Res, Next);
-            end);
-
-          THorse.delete('/excluir',
-            procedure(Req: THorseRequest; Res: THorseResponse; Next: TProc)
-            begin
-              self.excluir(Req, Res, Next);
-            end);
-
-          THorse.Get('/tarefasConcluidas',
-            procedure(Req: THorseRequest; Res: THorseResponse; Next: TProc)
-            begin
-              self.retornaNumeroTarefasConcluidas(Req, Res, Next);
-            end);
-
-          THorse.Get('/numeroTarefas',
-            procedure(Req: THorseRequest; Res: THorseResponse; Next: TProc)
-            begin
-              self.retornaNumeroTarefas(Req, Res, Next);
-            end);
-
-          THorse.Get('/mediaPrioridadeTarefas',
-            procedure(Req: THorseRequest; Res: THorseResponse; Next: TProc)
-            begin
-              self.retornaMediaPrioridadeTarefas(Req, Res, Next);
-            end);
-
-          THorse.Listen(9000);
-          Label1.Caption :=  'Serviço Iniciado na porta 9000.';
-        except
-          on E: Exception do
-            ShowMessage('Erro: ' + E.Message);
-        end;
+        iniciarServidor();
       end
     else
       begin
-        BitBtn1.Caption := 'Iniciar';
-        Label1.Caption := '';
-        THorse.StopListen;
+        pararServidor();
       end;
   except on E: Exception do
     ShowMessage('Erro interno do servidor: ' + E.Message);
   end;
+end;
+
+
+procedure TFPrincipal.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  if(BitBtn1.Caption = 'Parar')then
+    pararServidor();
+end;
+
+procedure TFPrincipal.iniciarServidor();
+begin
+  BitBtn1.Caption := 'Parar';
+  try
+    if(not assigned(tarefaDao))then
+      tarefaDao := TDatabaseFactory.CreateInteraction;
+
+    THorse.Get('/consultar', procedure(Req: THorseRequest; Res: THorseResponse; Next: TProc)
+      begin
+        self.consultar(Req, Res, Next);
+      end);
+
+    THorse.post('/inserir',
+      procedure(Req: THorseRequest; Res: THorseResponse; Next: TProc)
+      begin
+        self.inserir(Req, Res, Next);
+      end);
+
+    THorse.put('/alterar',
+      procedure(Req: THorseRequest; Res: THorseResponse; Next: TProc)
+      begin
+        self.alterar(Req, Res, Next);
+      end);
+
+    THorse.delete('/excluir',
+      procedure(Req: THorseRequest; Res: THorseResponse; Next: TProc)
+      begin
+        self.excluir(Req, Res, Next);
+      end);
+
+    THorse.Get('/tarefasConcluidas',
+      procedure(Req: THorseRequest; Res: THorseResponse; Next: TProc)
+      begin
+        self.retornaNumeroTarefasConcluidas(Req, Res, Next);
+      end);
+
+    THorse.Get('/numeroTarefas',
+      procedure(Req: THorseRequest; Res: THorseResponse; Next: TProc)
+      begin
+        self.retornaNumeroTarefas(Req, Res, Next);
+      end);
+
+    THorse.Get('/mediaPrioridadeTarefas',
+      procedure(Req: THorseRequest; Res: THorseResponse; Next: TProc)
+      begin
+        self.retornaMediaPrioridadeTarefas(Req, Res, Next);
+      end);
+
+    THorse.Listen(9000);
+    Label1.Caption :=  'Serviço Iniciado na porta 9000.';
+  except
+    on E: Exception do
+      ShowMessage('Erro: ' + E.Message);
+  end;
+end;
+
+procedure TFPrincipal.pararServidor();
+begin
+  BitBtn1.Caption := 'Iniciar';
+  Label1.Caption := '';
+  THorse.StopListen;
 end;
 
 
