@@ -48,6 +48,8 @@ begin
   try
     if(BitBtn1.Caption = 'Iniciar')then
       begin
+        Label1.Caption := 'Iniciando o servidor...';
+        Application.ProcessMessages;
         iniciarServidor();
       end
     else
@@ -136,6 +138,9 @@ var
   JSONObj: TJSONObject;
 begin
   try
+    tarefa := nil;
+    JSONObj := nil;
+
     tarefa := TTarefa.Create();
 
     // Acessando o corpo da solicitação como uma string JSON
@@ -163,10 +168,10 @@ begin
 
     Res.Send('Tarefa inserida com sucesso!').Status(200);
   finally
-    if(JSONObj <> nil)then
-      JSONObj.Free;
+    if (JSONObj<> nil)then
+      FreeAndNil(JSONObj);
     if(tarefa <> nil)then
-      tarefa.Free;
+      FreeAndNil(tarefa);
   end;
 end;
 
@@ -202,18 +207,13 @@ var
   retorno: real;
 begin
   try
-    try
-        retorno := tarefaDao.retornaNumeroTarefasConcluidas();
+    retorno := tarefaDao.retornaNumeroTarefasConcluidas();
 
-        Res.Status(400).Send('Status inválido!');
+    Res.Status(400).Send('Status inválido!');
 
-      Res.Send('Media de Prioridade das Tarefas: ' + floatToStr(retorno)).Status(200);
-    except on E: Exception do
-       Res.Status(500).Send('Erro interno do servidor: ' + E.Message);
-    end;
-
-  finally
-
+    Res.Send('Media de Prioridade das Tarefas: ' + floatToStr(retorno)).Status(200);
+  except on E: Exception do
+     Res.Status(500).Send('Erro interno do servidor: ' + E.Message);
   end;
 end;
 
@@ -224,6 +224,9 @@ var
   JSONObj: TJSONObject;
 begin
   try
+    tarefa := nil;
+    JSONObj := nil;
+
     tarefa := TTarefa.Create();
 
     // Acessando o corpo da solicitação como uma string JSON
@@ -250,7 +253,7 @@ begin
     Res.Send('Tarefa atualizada com sucesso!').Status(200);
   finally
     if(JSONObj <> nil)then
-      JSONObj.Free;
+      FreeAndNil(JSONObj);
   end;
 end;
 
@@ -261,37 +264,49 @@ var
   JSONLista: TJSONArray;
   query: TADOQuery;
 begin
+  JSONObj := nil;
+  JSONLista := nil;
+  query := nil;
+
   // Acessando o corpo da solicitação como uma string JSON
   if (length(Req.Body) > 0) then
     JSONObj := TJSONObject.ParseJSONValue(Req.Body) as TJSONObject;
-
   try
-    if ((length(Req.Body) > 0) and (Assigned(JSONObj.Values['idtarefa'])))then
-      begin
-        query := tarefaDao.buscar(JSONObj.GetValue<Integer>('idtarefa'));
-      end
-    else if ((length(Req.Body) > 0) and (Assigned(JSONObj.Values['descricao'])))then
-      begin
-        query := tarefaDao.buscar(JSONObj.GetValue<string>('descricao'));
-      end
-    else
-      begin
-        query := tarefaDao.buscar();
-      end;
-
-    if(Assigned(query))then
-      begin
-        try
-          JSONLista := criaListaJSON(query);
-        except on E: Exception do
-          Res.Status(500).Send('Erro interno do servidor: ' + E.Message);
+    try
+      if ((length(Req.Body) > 0) and (Assigned(JSONObj.Values['idtarefa'])))then
+        begin
+          query := tarefaDao.buscar(JSONObj.GetValue<Integer>('idtarefa'));
+        end
+      else if ((length(Req.Body) > 0) and (Assigned(JSONObj.Values['descricao'])))then
+        begin
+          query := tarefaDao.buscar(JSONObj.GetValue<string>('descricao'));
+        end
+      else
+        begin
+          query := tarefaDao.buscar();
         end;
-      end;
 
-    Res.Status(200).Send(JSONLista.ToString);
+      if(Assigned(query))then
+        begin
+          try
+            JSONLista := criaListaJSON(query);
+          except on E: Exception do
+            Res.Status(500).Send('Erro interno do servidor: ' + E.Message);
+          end;
+        end;
 
-  except on E: Exception do
-     Res.Status(500).Send('Erro interno do servidor: ' + E.Message);
+      Res.Status(200).Send(JSONLista.ToString);
+
+    except on E: Exception do
+       Res.Status(500).Send('Erro interno do servidor: ' + E.Message);
+    end;
+  finally
+    if(JSONObj <> nil)then
+      freeAndNil(JSONObj);
+    if(JSONLista <> nil)then
+      freeAndNil(JSONLista);
+    if(query <> nil) then
+      freeAndNil(query);
   end;
 end;
 
@@ -299,6 +314,7 @@ procedure TFPrincipal.excluir(Req: THorseRequest; Res: THorseResponse; Next: TPr
 var
   JSONObj: TJSONObject;
 begin
+  JSONObj := nil;
   try
     try
       JSONObj := TJSONObject.ParseJSONValue(Req.Body) as TJSONObject;
@@ -332,31 +348,42 @@ var
   tarefa: TTarefa;
   JSONLista: TJSONArray;
 begin
-   JSONLista := TJSONArray.Create;
+  tarefa := nil;
+  JSONLista := nil;
 
-   query.close;
-   query.open;
-   query.First;
-   while not query.eof do
-     begin
-       tarefa := TTarefa.Create;
-       try
-         tarefa.IdTarefa   := query.FieldByName('id_tarefa').AsInteger;
-         tarefa.Descricao  := query.FieldByName('descricao').AsString;
-         tarefa.Status     := TStatusTarefa(query.FieldByName('status').AsInteger);
-         tarefa.Data       := query.FieldByName('data').AsDateTime;
-         tarefa.Prioridade := TPrioridadetarefa(query.FieldByName('prioridade').AsInteger);
-         JSONLista.AddElement(self.criaObjJson(tarefa));
+  JSONLista := TJSONArray.Create;
 
-        finally
-          if(tarefa <> nil)then
-            tarefa.Free;
-        end;
+  try
 
-       query.next;
-     end;
+    query.close;
+    query.open;
+    query.First;
+    while not query.eof do
+      begin
+        tarefa := TTarefa.Create;
+        try
+          tarefa.IdTarefa   := query.FieldByName('id_tarefa').AsInteger;
+          tarefa.Descricao  := query.FieldByName('descricao').AsString;
+          tarefa.Status     := TStatusTarefa(query.FieldByName('status').AsInteger);
+          tarefa.Data       := query.FieldByName('data').AsDateTime;
+          tarefa.Prioridade := TPrioridadetarefa(query.FieldByName('prioridade').AsInteger);
+          JSONLista.AddElement(self.criaObjJson(tarefa));
 
-   result := JSONLista;
+         finally
+           if(tarefa <> nil)then
+             tarefa.Free;
+         end;
+
+        query.next;
+      end;
+
+    result := JSONLista;
+  finally
+    if (JSONLista <> nil)then
+      FreeAndNil(JSONLista);
+    if(tarefa <> nil)then
+      FreeAndNil(tarefa);
+  end;
 end;
 
 function TFPrincipal.criaObjJson(tarefa:TTarefa): TJSONObject;
