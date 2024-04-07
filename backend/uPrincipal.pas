@@ -46,18 +46,28 @@ uses
 procedure TFPrincipal.BitBtn1Click(Sender: TObject);
 begin
   try
-    if(BitBtn1.Caption = 'Iniciar')then
-      begin
-        Label1.Caption := 'Iniciando o servidor...';
-        Application.ProcessMessages;
-        iniciarServidor();
-      end
-    else
-      begin
-        pararServidor();
-      end;
-  except on E: Exception do
-    ShowMessage('Erro interno do servidor: ' + E.Message);
+    try
+      BitBtn1.Enabled := false;
+      Label1.Caption := 'Iniciando o servidor...';
+      Application.ProcessMessages;
+
+      if(BitBtn1.Caption = 'Iniciar')then
+        begin
+          iniciarServidor();
+          BitBtn1.Caption := 'Parar';
+          Label1.Caption :=  'Serviço Iniciado na porta 9000.';
+        end
+      else
+        begin
+          pararServidor();
+          BitBtn1.Caption := 'Iniciar';
+          Label1.Caption := '';
+        end;
+    except on E: Exception do
+      ShowMessage('Erro interno do servidor: ' + E.Message);
+    end;
+  finally
+    BitBtn1.Enabled := true;
   end;
 end;
 
@@ -70,7 +80,6 @@ end;
 
 procedure TFPrincipal.iniciarServidor();
 begin
-  BitBtn1.Caption := 'Parar';
   try
     if(not assigned(tarefaDao))then
       tarefaDao := TDatabaseFactory.CreateInteraction;
@@ -117,7 +126,6 @@ begin
       end);
 
     THorse.Listen(9000);
-    Label1.Caption :=  'Serviço Iniciado na porta 9000.';
   except
     on E: Exception do
       ShowMessage('Erro: ' + E.Message);
@@ -126,8 +134,6 @@ end;
 
 procedure TFPrincipal.pararServidor();
 begin
-  BitBtn1.Caption := 'Iniciar';
-  Label1.Caption := '';
   THorse.StopListen;
 end;
 
