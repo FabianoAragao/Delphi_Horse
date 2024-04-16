@@ -112,6 +112,7 @@
         <DCCReference Include="uDataBaseSqlServerADOConnection.pas"/>
         <DCCReference Include="uDatabasseSqlServerADOGeneric.pas"/>
         <DCCReference Include="interface\uITarefaDao.pas"/>
+        <DCCReference Include="utils\uJWTManager.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

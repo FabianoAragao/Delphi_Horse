@@ -5,7 +5,8 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Buttons, Horse,
-  System.JSON, uTarefa, Data.Win.ADODB, uITarefaDao;
+  System.JSON, uTarefa, Data.Win.ADODB, uITarefaDao, uJWTManager, IdBaseComponent, IdComponent,
+  IdTCPConnection, IdTCPClient;
 
 type
   TFPrincipal = class(TForm)
@@ -28,6 +29,9 @@ type
     function criaListaJSON(query: TADOQuery): TJSONArray;
     procedure pararServidor;
     procedure iniciarServidor;
+    function getIdUsuario(pUsuario: string; pSenha: string):Integer;
+    procedure gerarToken(Req: THorseRequest; Res: THorseResponse; Next: TProc);
+    function autenticacao(Req: THorseRequest):string;
   public
 
   end;
@@ -39,7 +43,7 @@ implementation
 
 uses
   System.Generics.Collections, uDatabaseFactory, uStatusTarefaEnum, TypInfo,
-  uPrioridadeTarefaEnum;
+  uPrioridadeTarefaEnum, IdCoderMIME;
 
 {$R *.dfm}
 
@@ -125,6 +129,12 @@ begin
         self.retornaMediaPrioridadeTarefas(Req, Res, Next);
       end);
 
+    THorse.get('/getToken',
+      procedure(Req: THorseRequest; Res: THorseResponse; Next: TProc)
+      begin
+        self.gerarToken(Req, Res, Next);
+      end);
+
     THorse.Listen(9000);
   except
     on E: Exception do
@@ -157,8 +167,6 @@ begin
         tarefa.Status     := TStatusTarefa(JSONObj.GetValue<smallint>('status'));
         tarefa.Data       := JSONObj.GetValue<TDateTime>('data');
         tarefa.Prioridade := TPrioridadetarefa(JSONObj.GetValue<smallint>('prioridade'));
-
-
       end
     else
       begin
@@ -206,7 +214,6 @@ begin
      Res.Status(500).Send('Erro interno do servidor: ' + E.Message);
   end;
 end;
-
 
 procedure TFPrincipal.retornaNumeroTarefasConcluidas(Req: THorseRequest; Res: THorseResponse; Next: TProc);
 var
@@ -343,6 +350,85 @@ begin
       JSONObj.Free;
   end;
 end;
+
+procedure TFPrincipal.gerarToken(Req: THorseRequest; Res: THorseResponse; Next: TProc);
+var
+  JSONObj: TJSONObject;
+  usuario, senha: string;
+  idUsuario: Integer;
+  Token: string;
+begin
+  try
+    // Aqui e preciso validar as credenciais, autenticar o usuário, etc...
+    // Neste exemplo vou gerar um token usando um método ficticio de autenticação
+    autenticacao(Req);
+
+    try
+      Token := TJWTManager.GenerateToken(idUsuario);
+    except on E: Exception do
+      Res.Status(401).Send('Falha na autenticação: ' + E.Message);
+    end;
+
+    Res.Send(TJSONObject.Create(TJSONPair.Create('token', Token)));
+  finally
+  end;
+end;
+
+function TFPrincipal.autenticacao(Req: THorseRequest):string;
+var
+  basicAuth: string;
+  authData: string;
+  usuario: string;
+  senha: string;
+  idUsuario: integer;
+begin
+  // Verifica se o cabeçalho de autorização está presente
+  if Req.Headers['Authorization'] <> '' then
+    begin
+      basicAuth := Req.Headers['Authorization'];
+      authData := Copy(basicAuth, 7, Length(basicAuth));
+
+      // Decodifica os dados de autorização Basic
+      authData := TIdDecoderMIME.DecodeString(authData);
+
+      usuario := '';
+      senha := '';
+
+      if authData <> '' then
+        begin
+          usuario := Copy(authData, 1, Pos(':', authData) - 1);
+          senha := Copy(authData, Pos(':', authData) + 1, Length(authData));
+          idUsuario := getIdUsuario(usuario, senha);
+          result := TJWTManager.GenerateToken(idUsuario);
+        end
+      else
+        raise Exception.Create('Credenciais não enviadas.');
+    end
+  else
+    raise Exception.Create('Requisição sem cabeçalho.');
+end;
+
+//faz uma autenticação ficticia
+function TFPrincipal.getIdUsuario(pUsuario: string; pSenha: string):Integer;
+begin
+  result := 0;
+
+  if((pUsuario = 'fabiano') and (pSenha = '123'))then
+    begin
+      result := 1;
+    end
+  else if((pUsuario = 'maria') and (pSenha = '321'))then
+    begin
+      result := 2;
+    end
+  else if((pUsuario = 'joao') and (pSenha = '456'))then
+    begin
+      result := 3;
+    end
+  else
+    raise Exception.Create('Credenciais inválidas.');
+end;
+
 
 procedure TFPrincipal.FormCreate(Sender: TObject);
 begin

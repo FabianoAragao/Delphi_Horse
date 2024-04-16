@@ -26,7 +26,6 @@ object FPrincipal: TFPrincipal
     Font.Name = 'Segoe UI'
     Font.Style = [fsBold]
     ParentFont = False
-    ExplicitTop = 136
     ExplicitWidth = 4
   end
   object BitBtn1: TBitBtn

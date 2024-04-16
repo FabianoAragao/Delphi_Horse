@@ -12,7 +12,8 @@ uses
   uDatabaseFactory in 'factorys\uDatabaseFactory.pas',
   uDataBaseSqlServerADOConnection in 'uDataBaseSqlServerADOConnection.pas',
   uDatabasseSqlServerADOGeneric in 'uDatabasseSqlServerADOGeneric.pas',
-  uITarefaDao in 'interface\uITarefaDao.pas';
+  uITarefaDao in 'interface\uITarefaDao.pas',
+  uJWTManager in 'utils\uJWTManager.pas';
 
 {$R *.res}
 
